@@ -1,0 +1,7 @@
+{
+  "name": "AI Interview Coach",
+  "description": "An AI-powered application to help users practice for interviews. Get instant feedback on your answers and a comprehensive summary of your performance.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
