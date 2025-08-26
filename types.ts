@@ -15,6 +15,7 @@ export interface InterviewSummary {
   areasForImprovement: string[];
   overallScore: number;
   summary: string;
+  toneAnalysis: string;
 }
 
 export const LANGUAGES = {

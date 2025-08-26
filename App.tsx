@@ -35,11 +35,36 @@ const App: React.FC = () => {
       setAppState(AppState.INTERVIEW);
     } catch (e) {
       console.error(e);
-      setError('Failed to start the interview session. Please check your API key and try again.');
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError('An unknown error occurred while starting the interview.');
+      }
     } finally {
       setIsLoading(false);
     }
   }, [language]);
+
+  const handleEndInterview = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    setAppState(AppState.SUMMARY);
+
+    try {
+      const fullTranscript = messages.map(msg => `${msg.role === 'user' ? 'You' : 'Interviewer'}: ${msg.text}`).join('\n\n');
+      const interviewSummary = await GeminiService.getInterviewSummary(fullTranscript);
+      setSummary(interviewSummary);
+    } catch (e) {
+      console.error(e);
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError('An unknown error occurred while generating the summary.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [messages]);
 
   const handleUserAnswer = useCallback(async (answer: string) => {
     if (!chatRef.current) return;
@@ -71,28 +96,17 @@ const App: React.FC = () => {
       }
     } catch (e) {
       console.error(e);
-      setError('Failed to get feedback. Please try again.');
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError('An unknown error occurred while getting feedback.');
+      }
+      // Revert the user message optimistic update on error
+      setMessages(prev => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
     }
-  }, [messages]);
-
-  const handleEndInterview = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    setAppState(AppState.SUMMARY);
-
-    try {
-      const fullTranscript = messages.map(msg => `${msg.role === 'user' ? 'You' : 'Interviewer'}: ${msg.text}`).join('\n\n');
-      const interviewSummary = await GeminiService.getInterviewSummary(fullTranscript);
-      setSummary(interviewSummary);
-    } catch (e) {
-      console.error(e);
-      setError('Failed to generate the interview summary.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [messages]);
+  }, [messages, handleEndInterview]);
   
   const handleRestart = () => {
     setAppState(AppState.WELCOME);
