@@ -1,9 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { AppState, QuizQuestion, UserAnswer, QuizSummary, LanguageCode } from './types';
+import { AppState, QuizQuestion, UserAnswer, QuizSummary, InterviewQuestion, InterviewAnswer, InterviewSummary, LanguageCode } from './types';
 import { GeminiService } from './services/geminiService';
 import WelcomeScreen from './components/WelcomeScreen';
 import InterviewScreen from './components/InterviewScreen';
+import VoiceInterviewScreen from './components/VoiceInterviewScreen';
 import SummaryReport from './components/SummaryReport';
+import InterviewSummaryReport from './components/InterviewSummaryReport';
 import Header from './components/Header';
 import SettingsModal from './components/SettingsModal';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -11,66 +13,84 @@ import { SettingsIcon } from './components/icons/SettingsIcon';
 import { HomeIcon } from './components/icons/HomeIcon';
 
 const App: React.FC = () => {
+  // General State
   const [appState, setAppState] = useState<AppState>(AppState.WELCOME);
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
-  const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-  const [quizSummary, setQuizSummary] = useState<QuizSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [language, setLanguage] = useState<LanguageCode>('en-US');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
 
-  const handleStartQuiz = useCallback(async (topic: string) => {
-    setIsLoading(true);
+  // Quiz State
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
+  const [quizSummary, setQuizSummary] = useState<QuizSummary | null>(null);
+  
+  // Interview State
+  const [interviewQuestions, setInterviewQuestions] = useState<InterviewQuestion[]>([]);
+  const [userInterviewAnswers, setUserInterviewAnswers] = useState<InterviewAnswer[]>([]);
+  const [interviewSummary, setInterviewSummary] = useState<InterviewSummary | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false); // For feedback generation
+
+
+  const resetState = () => {
+    setAppState(AppState.WELCOME);
     setError(null);
+    setIsLoading(false);
+    setCurrentQuestionIndex(0);
+    // Quiz
     setQuizQuestions([]);
     setUserAnswers([]);
-    setCurrentQuestionIndex(0);
     setQuizSummary(null);
+    // Interview
+    setInterviewQuestions([]);
+    setUserInterviewAnswers([]);
+    setInterviewSummary(null);
+  };
+
+  const handleStart = useCallback(async (topic: string, mode: 'quiz' | 'voice') => {
+    setIsLoading(true);
+    resetState(); // Reset everything before starting a new session
+    setAppState(mode === 'quiz' ? AppState.QUIZ : AppState.INTERVIEW);
 
     try {
-      const questions = await GeminiService.generateQuiz(topic, language);
-      if (questions.length === 0) {
-        setError("The AI failed to generate a quiz for this topic. Please try another one.");
-        return;
+      if (mode === 'quiz') {
+        const questions = await GeminiService.generateQuiz(topic, language);
+        if (questions.length === 0) throw new Error("The AI failed to generate a quiz.");
+        setQuizQuestions(questions);
+      } else {
+        const questions = await GeminiService.generateInterviewQuestions(topic, language);
+        if (questions.length === 0) throw new Error("The AI failed to generate interview questions.");
+        setInterviewQuestions(questions);
       }
-      setQuizQuestions(questions);
-      setAppState(AppState.QUIZ);
     } catch (e) {
       console.error(e);
-      if (e instanceof Error) {
-        setError(e.message);
-      } else {
-        setError('An unknown error occurred while starting the quiz.');
-      }
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+      setError(errorMessage);
+      setAppState(AppState.WELCOME); // Go back to welcome on error
     } finally {
       setIsLoading(false);
     }
   }, [language]);
 
+  // --- Quiz Logic ---
   const handleAnswerSubmit = (selectedOptionIndex: number) => {
     const currentQuestion = quizQuestions[currentQuestionIndex];
-    const isCorrect = currentQuestion.correctAnswerIndex === selectedOptionIndex;
-
     const answer: UserAnswer = {
       questionIndex: currentQuestionIndex,
       selectedOptionIndex,
-      isCorrect,
+      isCorrect: currentQuestion.correctAnswerIndex === selectedOptionIndex,
     };
-
     setUserAnswers(prev => [...prev, answer]);
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuizQuestion = () => {
     if (currentQuestionIndex < quizQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      // End of quiz, generate summary
-      const score = userAnswers.filter(a => a.isCorrect).length;
       const summary: QuizSummary = {
-        score,
+        score: userAnswers.filter(a => a.isCorrect).length,
         totalQuestions: quizQuestions.length,
         results: userAnswers,
         questions: quizQuestions,
@@ -79,14 +99,43 @@ const App: React.FC = () => {
       setAppState(AppState.SUMMARY);
     }
   };
+
+  // --- Interview Logic ---
+  const handleInterviewAnswerSubmit = async (answer: string) => {
+      setIsProcessing(true);
+      setError(null);
+      try {
+        const feedback = await GeminiService.getFeedbackForAnswer(interviewQuestions[currentQuestionIndex].question, answer, language);
+        const interviewAnswer: InterviewAnswer = {
+          questionIndex: currentQuestionIndex,
+          answer,
+          feedback,
+        };
+        setUserInterviewAnswers(prev => [...prev, interviewAnswer]);
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred getting feedback.';
+        setError(errorMessage);
+      } finally {
+        setIsProcessing(false);
+      }
+  };
+  
+  const handleNextInterviewQuestion = () => {
+    setError(null); // Clear feedback errors on next
+    if (currentQuestionIndex < interviewQuestions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      const summary: InterviewSummary = {
+        questions: interviewQuestions,
+        results: userInterviewAnswers
+      };
+      setInterviewSummary(summary);
+      setAppState(AppState.SUMMARY);
+    }
+  };
   
   const handleRestart = () => {
-    setAppState(AppState.WELCOME);
-    setQuizQuestions([]);
-    setUserAnswers([]);
-    setCurrentQuestionIndex(0);
-    setQuizSummary(null);
-    setError(null);
+    resetState();
     setIsConfirmModalOpen(false);
   };
 
@@ -95,7 +144,7 @@ const App: React.FC = () => {
   };
 
   const handleHomeClick = () => {
-    if (appState === AppState.QUIZ) {
+    if (appState === AppState.QUIZ || appState === AppState.INTERVIEW) {
       setIsConfirmModalOpen(true);
     } else {
       handleRestart();
@@ -105,35 +154,46 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (appState) {
       case AppState.QUIZ:
-        if (quizQuestions.length === 0) {
-            return (
-                <div className="p-8 text-center">
-                    <p className="text-slate-300">Loading quiz...</p>
-                </div>
-            )
-        }
+        if (quizQuestions.length === 0) return <div className="p-8 text-center"><p className="text-slate-300">Loading quiz...</p></div>;
         return (
           <InterviewScreen
             question={quizQuestions[currentQuestionIndex]}
             onAnswerSubmit={handleAnswerSubmit}
-            onNext={handleNextQuestion}
+            onNext={handleNextQuizQuestion}
             questionNumber={currentQuestionIndex + 1}
             totalQuestions={quizQuestions.length}
             userAnswer={userAnswers.find(a => a.questionIndex === currentQuestionIndex)}
           />
         );
+      case AppState.INTERVIEW:
+          if (interviewQuestions.length === 0) return <div className="p-8 text-center"><p className="text-slate-300">Loading interview...</p></div>;
+          return (
+              <VoiceInterviewScreen
+                question={interviewQuestions[currentQuestionIndex]}
+                language={language}
+                onAnswerSubmit={handleInterviewAnswerSubmit}
+                onNext={handleNextInterviewQuestion}
+                questionNumber={currentQuestionIndex + 1}
+                totalQuestions={interviewQuestions.length}
+                lastAnswer={userInterviewAnswers.find(a => a.questionIndex === currentQuestionIndex)}
+                isProcessing={isProcessing}
+              />
+          );
       case AppState.SUMMARY:
-        return (
-          <SummaryReport
-            summary={quizSummary}
-            isLoading={isLoading}
-            onRestart={handleRestart}
-          />
-        );
+        if (quizSummary) {
+          return <SummaryReport summary={quizSummary} isLoading={isLoading} onRestart={handleRestart} />;
+        }
+        if (interviewSummary) {
+          return <InterviewSummaryReport summary={interviewSummary} onRestart={handleRestart} />;
+        }
+        // Fallback if no summary is available
+        handleRestart();
+        return null;
+
       case AppState.WELCOME:
       default:
         return (
-          <WelcomeScreen onStart={handleStartQuiz} isLoading={isLoading} />
+          <WelcomeScreen onStart={handleStart} isLoading={isLoading} />
         );
     }
   };
@@ -174,10 +234,10 @@ const App: React.FC = () => {
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
         onConfirm={handleRestart}
-        title="End Quiz?"
-        confirmText="End Quiz"
+        title="End Session?"
+        confirmText="End Session"
       >
-        <p>Are you sure you want to end this quiz and return to the home screen? Your progress will be lost.</p>
+        <p>Are you sure you want to end this session and return to the home screen? Your progress will be lost.</p>
       </ConfirmationModal>
     </div>
   );

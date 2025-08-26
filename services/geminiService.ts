@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { QuizQuestion, LanguageCode, LANGUAGES } from '../types';
+import { QuizQuestion, InterviewQuestion, LanguageCode, LANGUAGES } from '../types';
 
 export class GeminiService {
   private static ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -9,6 +9,10 @@ export class GeminiService {
         const message = error.message.toLowerCase();
 
         if (message.includes('could not parse the quiz') || message.includes('ai returned an empty quiz')) {
+            return error.message;
+        }
+        
+        if (message.includes('could not parse the response')) {
             return error.message;
         }
 
@@ -90,6 +94,97 @@ export class GeminiService {
     } catch (error) {
         console.error("Error in generateQuiz:", error);
         throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  public static async generateInterviewQuestions(topic: string, language: LanguageCode): Promise<InterviewQuestion[]> {
+    const languageName = LANGUAGES[language];
+    try {
+        const response = await this.ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Generate 5 open-ended interview questions about "${topic}". The questions should be in the ${languageName} language.`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        questions: {
+                            type: Type.ARRAY,
+                            description: "An array of 5 open-ended interview questions.",
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    question: { type: Type.STRING, description: "The question text." }
+                                },
+                                required: ["question"]
+                            }
+                        }
+                    },
+                    required: ["questions"]
+                }
+            }
+        });
+
+        try {
+            const jsonText = response.text.trim();
+            if (!jsonText) {
+                throw new Error("The AI returned empty questions. Please try again.");
+            }
+            const parsed = JSON.parse(jsonText) as { questions: InterviewQuestion[] };
+            if (!parsed.questions || parsed.questions.length === 0) {
+                 throw new Error("Could not parse the questions from the AI response. The format was invalid.");
+            }
+            return parsed.questions;
+        } catch (error) {
+            console.error("Failed to parse interview questions JSON:", response.text, error);
+            throw new Error("Could not parse the questions from the AI response. The format was invalid.");
+        }
+
+    } catch (error) {
+        console.error("Error in generateInterviewQuestions:", error);
+        throw new Error(this.getErrorMessage(error));
+    }
+  }
+  
+  public static async getFeedbackForAnswer(question: string, answer: string, language: LanguageCode): Promise<string> {
+    const languageName = LANGUAGES[language];
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `In ${languageName}, acting as a helpful and encouraging interview coach, review the following interview question and the user's answer. Provide concise (2-3 sentences), constructive feedback on the answer's clarity, structure, and completeness. Start with a positive reinforcement. Question: "${question}" User's Answer: "${answer}"`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              feedback: {
+                type: Type.STRING,
+                description: "Concise, constructive feedback for the user's answer."
+              }
+            },
+            required: ["feedback"]
+          }
+        }
+      });
+      
+      try {
+        const jsonText = response.text.trim();
+        if (!jsonText) {
+          throw new Error("The AI returned empty feedback.");
+        }
+        const parsed = JSON.parse(jsonText) as { feedback: string };
+        if (!parsed.feedback) {
+          throw new Error("Could not parse feedback from the AI response.");
+        }
+        return parsed.feedback;
+      } catch (error) {
+        console.error("Failed to parse feedback JSON:", response.text, error);
+        throw new Error("Could not parse feedback from the AI response.");
+      }
+
+    } catch (error) {
+      console.error("Error in getFeedbackForAnswer:", error);
+      throw new Error(this.getErrorMessage(error));
     }
   }
 }

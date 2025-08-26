@@ -1,6 +1,7 @@
 export enum AppState {
   WELCOME,
   QUIZ,
+  INTERVIEW,
   SUMMARY,
 }
 
@@ -22,6 +23,21 @@ export interface QuizSummary {
   totalQuestions: number;
   results: UserAnswer[];
   questions: QuizQuestion[];
+}
+
+export interface InterviewQuestion {
+    question: string;
+}
+
+export interface InterviewAnswer {
+    questionIndex: number;
+    answer: string;
+    feedback: string;
+}
+
+export interface InterviewSummary {
+    questions: InterviewQuestion[];
+    results: InterviewAnswer[];
 }
 
 export const LANGUAGES = {
