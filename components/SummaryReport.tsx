@@ -17,7 +17,7 @@ const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
       <div className="relative w-40 h-40">
         <svg className="w-full h-full" viewBox="0 0 120 120">
           <circle
-            className="text-slate-700"
+            className="text-slate-200 dark:text-slate-700"
             strokeWidth="12"
             stroke="currentColor"
             fill="transparent"
@@ -41,19 +41,19 @@ const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-4xl font-bold text-white">{score.toFixed(1)}</span>
-          <span className="text-sm text-slate-400">/ 10</span>
+          <span className="text-4xl font-bold text-slate-900 dark:text-white">{score.toFixed(1)}</span>
+          <span className="text-sm text-slate-500 dark:text-slate-400">/ 10</span>
         </div>
       </div>
     );
   };
 
 const IncorrectAnswer: React.FC<{ result: UserAnswer; question: QuizQuestion }> = ({ result, question }) => (
-    <div className="bg-slate-700/50 p-6 rounded-lg">
-        <p className="font-semibold text-slate-300 mb-3">{result.questionIndex + 1}. {question.question}</p>
+    <div className="bg-slate-100 dark:bg-slate-700/50 p-6 rounded-lg">
+        <p className="font-semibold text-slate-800 dark:text-slate-300 mb-3">{result.questionIndex + 1}. {question.question}</p>
         <p className="text-red-400 mb-1"><span className="font-medium">Your answer:</span> {question.options[result.selectedOptionIndex]}</p>
         <p className="text-green-400 mb-3"><span className="font-medium">Correct answer:</span> {question.options[question.correctAnswerIndex]}</p>
-        <p className="text-slate-400 border-t border-slate-600 pt-3 mt-3"><span className="font-medium">Explanation:</span> {question.explanation}</p>
+        <p className="text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-600 pt-3 mt-3"><span className="font-medium">Explanation:</span> {question.explanation}</p>
     </div>
 );
 
@@ -62,7 +62,7 @@ const SummaryReport: React.FC<SummaryReportProps> = ({ summary, isLoading, onRes
     return (
       <div className="p-8 md:p-12 flex flex-col items-center justify-center min-h-[400px]">
         <LoadingSpinner className="w-12 h-12 text-cyan-400" />
-        <p className="mt-4 text-slate-300 text-lg">Generating your report...</p>
+        <p className="mt-4 text-slate-600 dark:text-slate-300 text-lg">Generating your report...</p>
       </div>
     );
   }
@@ -71,7 +71,7 @@ const SummaryReport: React.FC<SummaryReportProps> = ({ summary, isLoading, onRes
     return (
       <div className="p-8 md:p-12 text-center">
         <h2 className="text-2xl font-bold text-red-400">Error</h2>
-        <p className="text-slate-300 mt-2">Could not generate your summary report.</p>
+        <p className="text-slate-600 dark:text-slate-300 mt-2">Could not generate your summary report.</p>
         <button
           onClick={onRestart}
           className="mt-6 px-6 py-3 bg-cyan-500 text-white font-semibold rounded-lg hover:bg-cyan-600 transition-colors"
@@ -87,17 +87,17 @@ const SummaryReport: React.FC<SummaryReportProps> = ({ summary, isLoading, onRes
 
   return (
     <div className="p-8 md:p-12">
-      <h2 className="text-3xl font-bold text-center text-white mb-8">Quiz Results</h2>
+      <h2 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-8">Quiz Results</h2>
       
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-12">
         <div className="flex-shrink-0 flex flex-col items-center w-full md:w-auto">
-            <h3 className="text-2xl font-semibold text-white mb-4">Final Score</h3>
+            <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-4">Final Score</h3>
             <ScoreCircle score={scoreOutOf10} />
             <p className="text-2xl font-bold mt-4">{summary.score} / {summary.totalQuestions}</p>
         </div>
         <div className="text-center md:text-left flex-grow mt-4">
-            <h3 className="text-2xl font-semibold text-white mb-2">Summary</h3>
-            <p className="text-slate-300 leading-relaxed">
+            <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">Summary</h3>
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
                 You've completed the quiz! 
                 {incorrectAnswers.length > 0 ? " Review your incorrect answers below to learn and improve." : " Congratulations on a perfect score!"}
             </p>

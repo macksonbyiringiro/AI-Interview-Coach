@@ -63,14 +63,14 @@ const VoiceInterviewScreen: React.FC<VoiceInterviewScreenProps> = ({
   return (
     <div className="p-4 sm:p-6 md:p-8 flex flex-col h-[75vh]">
       <div className="mb-6">
-        <p className="text-center text-slate-400 mb-2">Question {questionNumber} of {totalQuestions}</p>
-        <div className="w-full bg-slate-700 rounded-full h-2.5">
+        <p className="text-center text-slate-500 dark:text-slate-400 mb-2">Question {questionNumber} of {totalQuestions}</p>
+        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
           <div className="bg-cyan-500 h-2.5 rounded-full" style={{ width: `${(questionNumber / totalQuestions) * 100}%`, transition: 'width 0.5s ease-in-out' }}></div>
         </div>
       </div>
       
       <div className="flex-grow flex flex-col items-center">
-        <h2 className="text-2xl font-bold text-white mb-6 text-center">{question.question}</h2>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 text-center">{question.question}</h2>
         
         {!hasRecognitionSupport && (
             <div className="p-4 bg-red-500 text-white text-center rounded-lg">
@@ -80,11 +80,11 @@ const VoiceInterviewScreen: React.FC<VoiceInterviewScreenProps> = ({
 
         {speechError && <p className="text-red-400 text-center my-2">{speechError}</p>}
 
-        <div className="w-full max-w-2xl p-4 bg-slate-900/50 rounded-lg min-h-[120px] text-slate-300 border border-slate-700">
+        <div className="w-full max-w-2xl p-4 bg-slate-100 dark:bg-slate-900/50 rounded-lg min-h-[120px] text-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
             {transcript}
-            <span className="text-slate-500">{interimTranscript}</span>
+            <span className="text-slate-400 dark:text-slate-500">{interimTranscript}</span>
             {!transcript && !interimTranscript && !isListening && (
-                <span className="text-slate-500">Your answer will appear here...</span>
+                <span className="text-slate-400 dark:text-slate-500">Your answer will appear here...</span>
             )}
         </div>
 
@@ -111,17 +111,17 @@ const VoiceInterviewScreen: React.FC<VoiceInterviewScreenProps> = ({
       </div>
       
       {isProcessing && hasSubmitted && (
-          <div className="flex justify-center items-center gap-3 text-lg text-slate-300">
+          <div className="flex justify-center items-center gap-3 text-lg text-slate-600 dark:text-slate-300">
               <LoadingSpinner className="w-6 h-6"/>
               Analyzing your answer...
           </div>
       )}
 
       {showFeedback && lastAnswer && (
-        <div className="mt-6 pt-6 border-t border-slate-700 animate-fade-in">
-          <div className="max-w-3xl mx-auto bg-slate-900/50 p-6 rounded-lg">
+        <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 animate-fade-in">
+          <div className="max-w-3xl mx-auto bg-slate-100 dark:bg-slate-900/50 p-6 rounded-lg">
             <h3 className="text-2xl font-bold text-amber-400 mb-3">Feedback</h3>
-            <p className="text-slate-300 leading-relaxed">{lastAnswer.feedback}</p>
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{lastAnswer.feedback}</p>
             <div className="text-center mt-6">
                 <button onClick={handleNext} className="px-8 py-3 bg-cyan-500 text-white font-bold rounded-lg shadow-lg hover:bg-cyan-600 transition-all">
                     {questionNumber === totalQuestions ? "Finish Interview" : "Next Question"}

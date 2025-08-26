@@ -1,5 +1,44 @@
 import { useState, useEffect, useRef } from 'react';
 
+// FIX: Add type declarations for the Web Speech API which is not part of standard DOM typings.
+// These interfaces define the shape of the SpeechRecognition constructor and its related event objects,
+// allowing TypeScript to understand and type-check this browser feature.
+interface SpeechRecognitionStatic {
+  new(): SpeechRecognition;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+  onend: () => void;
+  start: () => void;
+  stop: () => void;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  [index: number]: { transcript: string };
+  length: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+
 interface SpeechRecognitionOptions {
   lang: string;
 }
@@ -14,9 +53,12 @@ interface SpeechRecognitionHook {
   error: string | null;
 }
 
-const getSpeechRecognition = () => {
+const getSpeechRecognition = (): SpeechRecognitionStatic | undefined => {
   if (typeof window !== 'undefined') {
-    return window.SpeechRecognition || window.webkitSpeechRecognition;
+    // FIX: Correctly access vendor-prefixed properties on the window object.
+    // Casting to `any` bypasses TypeScript's strict type checking for `window`,
+    // and the return type provides type safety for the rest of the hook.
+    return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   }
   return undefined;
 }
@@ -26,6 +68,7 @@ export const useSpeechRecognition = ({ lang }: SpeechRecognitionOptions): Speech
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // FIX: With the interfaces defined above, `SpeechRecognition` is now a known type.
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {

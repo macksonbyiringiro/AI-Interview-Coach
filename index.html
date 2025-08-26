@@ -1,10 +1,27 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Interview Coach</title>
+    <script>
+      // Prevents FOUC (Flash of Unstyled Content) for dark mode
+      try {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {
+        console.error('Could not set initial theme', e);
+      }
+    </script>
+    <script>
+      // Configure Tailwind CSS to use the 'class' strategy for dark mode.
+      // This is necessary for the theme toggle to work correctly with the Play CDN.
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +42,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-900 text-slate-100">
+  <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

@@ -20,7 +20,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
       role="dialog"
     >
       <div
-        className="bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700 w-full max-w-md transform transition-all duration-300 scale-95 opacity-0 animate-scale-in"
+        className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-200 dark:border-slate-700 w-full max-w-md transform transition-all duration-300 scale-95 opacity-0 animate-scale-in"
         onClick={(e) => e.stopPropagation()}
         style={{ animation: 'scale-in 0.2s ease-out forwards' }}
       >
@@ -38,8 +38,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
             }
           `}
         </style>
-        <h2 className="text-2xl font-bold text-white mb-4">{title}</h2>
-        <div className="text-slate-300 mb-6">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">{title}</h2>
+        <div className="text-slate-600 dark:text-slate-300 mb-6">
           {children}
         </div>
         <div className="flex justify-end gap-4">

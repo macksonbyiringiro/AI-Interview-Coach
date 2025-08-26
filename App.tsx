@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { AppState, QuizQuestion, UserAnswer, QuizSummary, InterviewQuestion, InterviewAnswer, InterviewSummary, LanguageCode } from './types';
 import { GeminiService } from './services/geminiService';
 import WelcomeScreen from './components/WelcomeScreen';
@@ -21,6 +21,9 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => 
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  );
 
   // Quiz State
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
@@ -33,6 +36,19 @@ const App: React.FC = () => {
   const [interviewSummary, setInterviewSummary] = useState<InterviewSummary | null>(null);
   const [isProcessing, setIsProcessing] = useState(false); // For feedback generation
 
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    try {
+      localStorage.setItem('theme', theme);
+    } catch (e) {
+      console.error("Failed to set theme in localStorage", e);
+    }
+  }, [theme]);
 
   const resetState = () => {
     setAppState(AppState.WELCOME);
@@ -143,6 +159,10 @@ const App: React.FC = () => {
     setLanguage(newLanguage);
   };
 
+  const handleThemeChange = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme);
+  };
+
   const handleHomeClick = () => {
     if (appState === AppState.QUIZ || appState === AppState.INTERVIEW) {
       setIsConfirmModalOpen(true);
@@ -154,7 +174,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (appState) {
       case AppState.QUIZ:
-        if (quizQuestions.length === 0) return <div className="p-8 text-center"><p className="text-slate-300">Loading quiz...</p></div>;
+        if (quizQuestions.length === 0) return <div className="p-8 text-center"><p className="text-slate-600 dark:text-slate-300">Loading quiz...</p></div>;
         return (
           <InterviewScreen
             question={quizQuestions[currentQuestionIndex]}
@@ -166,7 +186,7 @@ const App: React.FC = () => {
           />
         );
       case AppState.INTERVIEW:
-          if (interviewQuestions.length === 0) return <div className="p-8 text-center"><p className="text-slate-300">Loading interview...</p></div>;
+          if (interviewQuestions.length === 0) return <div className="p-8 text-center"><p className="text-slate-600 dark:text-slate-300">Loading interview...</p></div>;
           return (
               <VoiceInterviewScreen
                 question={interviewQuestions[currentQuestionIndex]}
@@ -199,12 +219,12 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
        <div className="w-full max-w-4xl mx-auto relative">
          {appState !== AppState.WELCOME && (
            <button
              onClick={handleHomeClick}
-             className="absolute top-0 left-0 p-2 text-slate-400 hover:text-cyan-400 transition-colors z-10"
+             className="absolute top-0 left-0 p-2 text-slate-500 dark:text-slate-400 hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors z-10"
              aria-label="Return to home screen"
            >
              <HomeIcon className="w-6 h-6" />
@@ -212,14 +232,14 @@ const App: React.FC = () => {
          )}
          <button 
           onClick={() => setIsSettingsOpen(true)}
-          className="absolute top-0 right-0 p-2 text-slate-400 hover:text-cyan-400 transition-colors z-10"
+          className="absolute top-0 right-0 p-2 text-slate-500 dark:text-slate-400 hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors z-10"
           aria-label="Open settings"
         >
           <SettingsIcon className="w-6 h-6" />
         </button>
 
         <Header />
-        <main className="mt-8 bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-700">
+        <main className="mt-8 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
             {error && <div className="p-4 bg-red-500 text-white text-center rounded-t-2xl">{error}</div>}
             {renderContent()}
         </main>
@@ -229,6 +249,8 @@ const App: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)}
         language={language}
         onLanguageChange={handleLanguageChange}
+        theme={theme}
+        onThemeChange={handleThemeChange}
       />
       <ConfirmationModal
         isOpen={isConfirmModalOpen}
