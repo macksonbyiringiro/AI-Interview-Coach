@@ -219,7 +219,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
        <div className="w-full max-w-4xl mx-auto relative">
          {appState !== AppState.WELCOME && (
            <button

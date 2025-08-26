@@ -7,7 +7,7 @@ const Header: React.FC = () => {
     <header className="text-center">
         <div className="flex items-center justify-center gap-4 mb-2">
             <BotIcon className="w-12 h-12 text-cyan-400" />
-            <h1 className="text-5xl font-bold text-slate-800 dark:bg-gradient-to-r dark:from-cyan-400 dark:to-blue-500 dark:text-transparent dark:bg-clip-text">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 dark:from-cyan-400 dark:to-blue-500 text-transparent bg-clip-text">
             AI Interview Coach
             </h1>
         </div>

@@ -6,38 +6,48 @@ export class GeminiService {
 
   private static getErrorMessage(error: unknown): string {
     if (error instanceof Error) {
+        // First, pass through app-specific parsing errors which are thrown internally.
+        // These are already user-friendly.
+        if (error.message.startsWith("Could not parse") || error.message.startsWith("The AI returned")) {
+            return error.message;
+        }
+
         const message = error.message.toLowerCase();
 
-        if (message.includes('could not parse the quiz') || message.includes('ai returned an empty quiz')) {
-            return error.message;
-        }
-        
-        if (message.includes('could not parse the response')) {
-            return error.message;
-        }
-
-        if (message.includes('api key not valid') || message.includes('api key is invalid')) {
+        // Check for common API key errors
+        if (message.includes('api key not valid') || message.includes('api key is invalid') || message.includes('api_key')) {
             return "Invalid API Key. Please ensure your API key is configured correctly.";
         }
         
-        if (message.includes('failed to fetch')) {
+        // Check for network errors
+        if (message.includes('failed to fetch') || message.includes('network')) {
             return "Network error. Please check your internet connection and try again.";
         }
 
+        // Check for safety/policy blocking
         if (message.includes('blocked') && (message.includes('safety') || message.includes('policy'))) {
              return "The response was blocked due to safety settings. Please try another topic.";
         }
 
+        // Check for rate limiting / resource exhaustion
         if (message.includes('resource has been exhausted') || message.includes('rate limit')) {
-            return "You've exceeded the request limit. Please wait a moment and try again.";
+            return "You've exceeded the request limit for the AI service. Please wait a moment and try again.";
+        }
+        
+        // Check for model permission issues
+        if (message.includes('permission denied') && message.includes('model')) {
+            return "You do not have permission to use the selected AI model. Please check your API key's permissions.";
         }
 
-        if (message.includes('internal error') || message.includes('500')) {
+        // Check for internal server errors from the AI service
+        if (message.includes('internal error') || message.includes('500') || message.includes('server error')) {
             return "An unexpected error occurred with the AI service. Please try again later.";
         }
         
+        // Generic fallback for other AI-related errors
         return "An unexpected error occurred while communicating with the AI. Please try again.";
     }
+    // Fallback for non-Error objects
     return "An unknown error occurred. Please try again.";
   }
 
