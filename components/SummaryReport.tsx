@@ -96,17 +96,18 @@ const SummaryReport: React.FC<SummaryReportProps> = ({ summary, isLoading, onRes
       <h2 className="text-3xl font-bold text-center text-white mb-8">Interview Performance Report</h2>
       
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-12">
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 flex flex-col items-center w-full md:w-auto">
+            <h3 className="text-2xl font-semibold text-white mb-4">Overall Score</h3>
             <ScoreCircle score={summary.overallScore} />
         </div>
         <div className="text-center md:text-left flex-grow">
             <div className="mb-6">
                 <h3 className="text-2xl font-semibold text-white mb-2">Overall Summary</h3>
-                <p className="text-slate-300">{summary.summary}</p>
+                <p className="text-slate-300 leading-relaxed">{summary.summary}</p>
             </div>
              <div>
                 <h3 className="text-2xl font-semibold text-white mb-2">Tone Analysis</h3>
-                <p className="text-slate-300">{summary.toneAnalysis}</p>
+                <p className="text-slate-300 leading-relaxed">{summary.toneAnalysis}</p>
             </div>
         </div>
       </div>

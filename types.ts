@@ -24,6 +24,7 @@ export const LANGUAGES = {
   'fr-FR': 'Français',
   'de-DE': 'Deutsch',
   'ja-JP': '日本語',
+  'rw-RW': 'Kinyarwanda',
 };
 
 export type LanguageCode = keyof typeof LANGUAGES;
