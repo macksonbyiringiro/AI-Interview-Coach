@@ -1,6 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
-import type { Chat } from '@google/genai';
-import { AppState, Message, InterviewSummary, LanguageCode } from './types';
+import React, { useState, useCallback } from 'react';
+import { AppState, QuizQuestion, UserAnswer, QuizSummary, LanguageCode } from './types';
 import { GeminiService } from './services/geminiService';
 import WelcomeScreen from './components/WelcomeScreen';
 import InterviewScreen from './components/InterviewScreen';
@@ -13,107 +12,81 @@ import { HomeIcon } from './components/icons/HomeIcon';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.WELCOME);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [summary, setSummary] = useState<InterviewSummary | null>(null);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [quizSummary, setQuizSummary] = useState<QuizSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [language, setLanguage] = useState<LanguageCode>('en-US');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const chatRef = useRef<Chat | null>(null);
 
-  const handleStartInterview = useCallback(async (topic: string) => {
+  const handleStartQuiz = useCallback(async (topic: string) => {
     setIsLoading(true);
     setError(null);
-    setMessages([]);
-    setSummary(null);
+    setQuizQuestions([]);
+    setUserAnswers([]);
+    setCurrentQuestionIndex(0);
+    setQuizSummary(null);
 
     try {
-      const { chat, firstQuestion } = await GeminiService.startInterviewSession(topic, language);
-      chatRef.current = chat;
-      setMessages([{ role: 'model', text: firstQuestion }]);
-      setAppState(AppState.INTERVIEW);
+      const questions = await GeminiService.generateQuiz(topic, language);
+      if (questions.length === 0) {
+        setError("The AI failed to generate a quiz for this topic. Please try another one.");
+        return;
+      }
+      setQuizQuestions(questions);
+      setAppState(AppState.QUIZ);
     } catch (e) {
       console.error(e);
       if (e instanceof Error) {
         setError(e.message);
       } else {
-        setError('An unknown error occurred while starting the interview.');
+        setError('An unknown error occurred while starting the quiz.');
       }
     } finally {
       setIsLoading(false);
     }
   }, [language]);
 
-  const handleEndInterview = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    setAppState(AppState.SUMMARY);
+  const handleAnswerSubmit = (selectedOptionIndex: number) => {
+    const currentQuestion = quizQuestions[currentQuestionIndex];
+    const isCorrect = currentQuestion.correctAnswerIndex === selectedOptionIndex;
 
-    try {
-      const fullTranscript = messages.map(msg => `${msg.role === 'user' ? 'You' : 'Interviewer'}: ${msg.text}`).join('\n\n');
-      const interviewSummary = await GeminiService.getInterviewSummary(fullTranscript);
-      setSummary(interviewSummary);
-    } catch (e) {
-      console.error(e);
-      if (e instanceof Error) {
-        setError(e.message);
-      } else {
-        setError('An unknown error occurred while generating the summary.');
-      }
-    } finally {
-      setIsLoading(false);
+    const answer: UserAnswer = {
+      questionIndex: currentQuestionIndex,
+      selectedOptionIndex,
+      isCorrect,
+    };
+
+    setUserAnswers(prev => [...prev, answer]);
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < quizQuestions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      // End of quiz, generate summary
+      const score = userAnswers.filter(a => a.isCorrect).length;
+      const summary: QuizSummary = {
+        score,
+        totalQuestions: quizQuestions.length,
+        results: userAnswers,
+        questions: quizQuestions,
+      };
+      setQuizSummary(summary);
+      setAppState(AppState.SUMMARY);
     }
-  }, [messages]);
-
-  const handleUserAnswer = useCallback(async (answer: string) => {
-    if (!chatRef.current) return;
-    setIsLoading(true);
-    setError(null);
-    
-    const currentQuestion = messages[messages.length - 1].text;
-    
-    const userMessage: Message = { role: 'user', text: answer };
-    setMessages(prev => [...prev, userMessage]);
-
-    try {
-      const { feedback, nextQuestion } = await GeminiService.sendAnswerAndGetFeedback(chatRef.current, currentQuestion, answer);
-      
-      setMessages(prev => {
-        const newMessages = [...prev];
-        const lastMessage = newMessages[newMessages.length - 1];
-        if (lastMessage.role === 'user') {
-          lastMessage.feedback = feedback;
-        }
-        return newMessages;
-      });
-
-      if (nextQuestion.toLowerCase().includes("thank you for your time")) {
-         await handleEndInterview();
-      } else {
-        const modelMessage: Message = { role: 'model', text: nextQuestion };
-        setMessages(prev => [...prev, modelMessage]);
-      }
-    } catch (e) {
-      console.error(e);
-      if (e instanceof Error) {
-        setError(e.message);
-      } else {
-        setError('An unknown error occurred while getting feedback.');
-      }
-      // Revert the user message optimistic update on error
-      setMessages(prev => prev.slice(0, -1));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [messages, handleEndInterview]);
+  };
   
   const handleRestart = () => {
     setAppState(AppState.WELCOME);
-    setMessages([]);
-    setSummary(null);
+    setQuizQuestions([]);
+    setUserAnswers([]);
+    setCurrentQuestionIndex(0);
+    setQuizSummary(null);
     setError(null);
-    chatRef.current = null;
     setIsConfirmModalOpen(false);
   };
 
@@ -122,7 +95,7 @@ const App: React.FC = () => {
   };
 
   const handleHomeClick = () => {
-    if (appState === AppState.INTERVIEW) {
+    if (appState === AppState.QUIZ) {
       setIsConfirmModalOpen(true);
     } else {
       handleRestart();
@@ -131,29 +104,36 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (appState) {
-      case AppState.INTERVIEW:
+      case AppState.QUIZ:
+        if (quizQuestions.length === 0) {
+            return (
+                <div className="p-8 text-center">
+                    <p className="text-slate-300">Loading quiz...</p>
+                </div>
+            )
+        }
         return (
           <InterviewScreen
-            messages={messages}
-            onAnswerSubmit={handleUserAnswer}
-            onEndInterview={handleEndInterview}
-            isLoading={isLoading}
-            language={language}
+            question={quizQuestions[currentQuestionIndex]}
+            onAnswerSubmit={handleAnswerSubmit}
+            onNext={handleNextQuestion}
+            questionNumber={currentQuestionIndex + 1}
+            totalQuestions={quizQuestions.length}
+            userAnswer={userAnswers.find(a => a.questionIndex === currentQuestionIndex)}
           />
         );
       case AppState.SUMMARY:
         return (
           <SummaryReport
-            summary={summary}
+            summary={quizSummary}
             isLoading={isLoading}
             onRestart={handleRestart}
-            messages={messages}
           />
         );
       case AppState.WELCOME:
       default:
         return (
-          <WelcomeScreen onStart={handleStartInterview} isLoading={isLoading} />
+          <WelcomeScreen onStart={handleStartQuiz} isLoading={isLoading} />
         );
     }
   };
@@ -194,10 +174,10 @@ const App: React.FC = () => {
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
         onConfirm={handleRestart}
-        title="End Interview?"
-        confirmText="End Interview"
+        title="End Quiz?"
+        confirmText="End Quiz"
       >
-        <p>Are you sure you want to end this interview and return to the home screen? Your progress will be lost.</p>
+        <p>Are you sure you want to end this quiz and return to the home screen? Your progress will be lost.</p>
       </ConfirmationModal>
     </div>
   );

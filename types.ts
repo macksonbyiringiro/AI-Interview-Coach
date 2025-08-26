@@ -1,21 +1,27 @@
 export enum AppState {
   WELCOME,
-  INTERVIEW,
+  QUIZ,
   SUMMARY,
 }
 
-export interface Message {
-  role: 'user' | 'model';
-  text: string;
-  feedback?: string;
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation: string;
 }
 
-export interface InterviewSummary {
-  strengths: string[];
-  areasForImprovement: string[];
-  overallScore: number;
-  summary: string;
-  toneAnalysis: string;
+export interface UserAnswer {
+  questionIndex: number;
+  selectedOptionIndex: number;
+  isCorrect: boolean;
+}
+
+export interface QuizSummary {
+  score: number;
+  totalQuestions: number;
+  results: UserAnswer[];
+  questions: QuizQuestion[];
 }
 
 export const LANGUAGES = {

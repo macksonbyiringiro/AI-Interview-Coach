@@ -34,12 +34,12 @@ export const Illustration: React.FC<{ className?: string }> = ({ className }) =>
     {/* Chat bubbles */}
     <g transform="translate(180, 80)">
       <path d="M10,0 C4.477,0 0,4.477 0,10 L0,30 C0,35.523 4.477,40 10,40 L60,40 C65.523,40 70,35.523 70,30 L70,10 C70,4.477 65.523,0 60,0 Z M 15 50 L 25 40 L 35 50 Z" fill="#0f172a" stroke="url(#grad1)" strokeWidth="2"/>
-      <text x="35" y="25" fontFamily="Inter, sans-serif" fontSize="12" fill="#e2e8f0" textAnchor="middle">Hello!</text>
+      <text x="35" y="25" fontFamily="Inter, sans-serif" fontSize="10" fill="#e2e8f0" textAnchor="middle">Q: What is React?</text>
     </g>
 
     <g transform="translate(260, 150)">
       <path d="M60,0 C65.523,0 70,4.477 70,10 L70,30 C70,35.523 65.523,40 60,40 L10,40 C4.477,40 0,35.523 0,30 L0,10 C0,4.477 4.477,0 10,0 Z M 55 50 L 45 40 L 35 50 Z" fill="#0f172a" stroke="#64748b" strokeWidth="2"/>
-       <text x="35" y="25" fontFamily="Inter, sans-serif" fontSize="12" fill="#e2e8f0" textAnchor="middle">I'm ready...</text>
+       <text x="35" y="25" fontFamily="Inter, sans-serif" fontSize="10" fill="#e2e8f0" textAnchor="middle">It's a library!</text>
     </g>
   </svg>
 );

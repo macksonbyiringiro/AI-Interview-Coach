@@ -11,7 +11,7 @@ const Header: React.FC = () => {
             AI Interview Coach
             </h1>
         </div>
-      <p className="text-slate-400 text-lg">Practice, get feedback, and land your dream job.</p>
+      <p className="text-slate-400 text-lg">Practice with AI-powered quizzes and master any topic.</p>
     </header>
   );
 };

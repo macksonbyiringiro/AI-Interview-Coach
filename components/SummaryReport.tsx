@@ -1,18 +1,17 @@
 import React from 'react';
-import type { InterviewSummary, Message } from '../types';
+import type { QuizSummary, UserAnswer, QuizQuestion } from '../types';
 import { LoadingSpinner } from './icons/LoadingSpinner';
-import { DownloadIcon } from './icons/DownloadIcon';
 
 interface SummaryReportProps {
-  summary: InterviewSummary | null;
+  summary: QuizSummary | null;
   isLoading: boolean;
   onRestart: () => void;
-  messages: Message[];
 }
 
 const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
     const circumference = 2 * Math.PI * 54; // 2 * pi * radius
-    const offset = circumference - (score / 10) * circumference;
+    const scaledScore = (score / 10) * 10; // score is already out of 10 for this component
+    const offset = circumference - (scaledScore / 10) * circumference;
   
     return (
       <div className="relative w-40 h-40">
@@ -49,12 +48,21 @@ const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
     );
   };
 
-const SummaryReport: React.FC<SummaryReportProps> = ({ summary, isLoading, onRestart, messages }) => {
+const IncorrectAnswer: React.FC<{ result: UserAnswer; question: QuizQuestion }> = ({ result, question }) => (
+    <div className="bg-slate-700/50 p-6 rounded-lg">
+        <p className="font-semibold text-slate-300 mb-3">{result.questionIndex + 1}. {question.question}</p>
+        <p className="text-red-400 mb-1"><span className="font-medium">Your answer:</span> {question.options[result.selectedOptionIndex]}</p>
+        <p className="text-green-400 mb-3"><span className="font-medium">Correct answer:</span> {question.options[question.correctAnswerIndex]}</p>
+        <p className="text-slate-400 border-t border-slate-600 pt-3 mt-3"><span className="font-medium">Explanation:</span> {question.explanation}</p>
+    </div>
+);
+
+const SummaryReport: React.FC<SummaryReportProps> = ({ summary, isLoading, onRestart }) => {
   if (isLoading) {
     return (
       <div className="p-8 md:p-12 flex flex-col items-center justify-center min-h-[400px]">
         <LoadingSpinner className="w-12 h-12 text-cyan-400" />
-        <p className="mt-4 text-slate-300 text-lg">Generating your performance report...</p>
+        <p className="mt-4 text-slate-300 text-lg">Generating your report...</p>
       </div>
     );
   }
@@ -74,72 +82,49 @@ const SummaryReport: React.FC<SummaryReportProps> = ({ summary, isLoading, onRes
     );
   }
 
-  const handleDownloadTranscript = () => {
-    const transcriptText = messages.map(msg => {
-      const prefix = msg.role === 'model' ? 'Interviewer' : 'You';
-      return `${prefix}:\n${msg.text}\n`;
-    }).join('\n\n');
-
-    const blob = new Blob([transcriptText], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'interview-transcript.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  const incorrectAnswers = summary.results.filter(r => !r.isCorrect);
+  const scoreOutOf10 = (summary.score / summary.totalQuestions) * 10;
 
   return (
     <div className="p-8 md:p-12">
-      <h2 className="text-3xl font-bold text-center text-white mb-8">Interview Performance Report</h2>
+      <h2 className="text-3xl font-bold text-center text-white mb-8">Quiz Results</h2>
       
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-12">
         <div className="flex-shrink-0 flex flex-col items-center w-full md:w-auto">
-            <h3 className="text-2xl font-semibold text-white mb-4">Overall Score</h3>
-            <ScoreCircle score={summary.overallScore} />
+            <h3 className="text-2xl font-semibold text-white mb-4">Final Score</h3>
+            <ScoreCircle score={scoreOutOf10} />
+            <p className="text-2xl font-bold mt-4">{summary.score} / {summary.totalQuestions}</p>
         </div>
-        <div className="text-center md:text-left flex-grow">
-            <div className="mb-6">
-                <h3 className="text-2xl font-semibold text-white mb-2">Overall Summary</h3>
-                <p className="text-slate-300 leading-relaxed">{summary.summary}</p>
-            </div>
-             <div>
-                <h3 className="text-2xl font-semibold text-white mb-2">Tone Analysis</h3>
-                <p className="text-slate-300 leading-relaxed">{summary.toneAnalysis}</p>
-            </div>
+        <div className="text-center md:text-left flex-grow mt-4">
+            <h3 className="text-2xl font-semibold text-white mb-2">Summary</h3>
+            <p className="text-slate-300 leading-relaxed">
+                You've completed the quiz! 
+                {incorrectAnswers.length > 0 ? " Review your incorrect answers below to learn and improve." : " Congratulations on a perfect score!"}
+            </p>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <div className="bg-slate-700/50 p-6 rounded-lg">
-          <h3 className="text-xl font-semibold text-green-400 mb-4">Strengths</h3>
-          <ul className="space-y-2 list-disc list-inside text-slate-200">
-            {summary.strengths.map((item, index) => <li key={index}>{item}</li>)}
-          </ul>
-        </div>
-        <div className="bg-slate-700/50 p-6 rounded-lg">
-          <h3 className="text-xl font-semibold text-amber-400 mb-4">Areas for Improvement</h3>
-          <ul className="space-y-2 list-disc list-inside text-slate-200">
-            {summary.areasForImprovement.map((item, index) => <li key={index}>{item}</li>)}
-          </ul>
-        </div>
-      </div>
+      {incorrectAnswers.length > 0 && (
+            <div className="mb-12">
+                <h3 className="text-2xl font-semibold text-amber-400 mb-4 text-center">Review Your Incorrect Answers</h3>
+                <div className="space-y-6">
+                    {incorrectAnswers.map(result => (
+                        <IncorrectAnswer 
+                            key={result.questionIndex} 
+                            result={result} 
+                            question={summary.questions[result.questionIndex]}
+                        />
+                    ))}
+                </div>
+            </div>
+      )}
       
-      <div className="text-center mt-12 flex flex-col sm:flex-row justify-center items-center gap-4">
+      <div className="text-center mt-12">
         <button
           onClick={onRestart}
           className="px-8 py-4 bg-cyan-500 text-white font-bold rounded-lg shadow-lg hover:bg-cyan-600 transition-all duration-200 transform hover:scale-105"
         >
-          Start a New Interview
-        </button>
-        <button
-          onClick={handleDownloadTranscript}
-          className="flex items-center gap-2 px-6 py-3 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-700 transition-colors"
-        >
-          <DownloadIcon className="w-5 h-5" />
-          Download Transcript
+          Take Another Quiz
         </button>
       </div>
     </div>
